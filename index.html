@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f3efe7">
+  <meta name="description" content="スマホを見る角度を見守る、日常の習慣改善ツール。カメラは使わず、記録はこの端末だけに残ります。">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="首らく">
+  <title>首らく — スマホの角度</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script>
+    try {
+      var raw = JSON.parse(localStorage.getItem('kubiraku-v1') || 'null');
+      if (raw && raw.settings && raw.settings.welcomed) document.documentElement.classList.add('welcomed');
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <div class="app">
+    <header class="top">
+      <div>
+        <h1>首らく</h1>
+        <p id="header-tag" class="tag">今日の下向き 0秒</p>
+      </div>
+      <button type="button" class="chip" id="scene-chip" aria-label="シーンと設定を開く">デスク</button>
+    </header>
+
+    <main id="main">
+      <section id="screen-watch" aria-label="見守り">
+        <p class="lead">下向きが続いたときだけ、知らせます。</p>
+        <p id="rule-text" class="rule"></p>
+
+        <div class="card gauge-card">
+          <div class="gauge-wrap">
+            <svg viewBox="0 0 200 118" class="gauge" aria-hidden="true">
+              <path d="M20 104 A80 80 0 0 1 180 104" class="g-bg"></path>
+              <path id="g-fg" d="M20 104 A80 80 0 0 1 180 104" class="g-fg"></path>
+            </svg>
+            <div class="gauge-num">
+              <strong><span id="deg">—</span><span class="unit">°</span></strong>
+              <span class="gauge-label">下向き</span>
+            </div>
+          </div>
+          <p id="status" class="status idle">見守り前</p>
+          <p id="countdown" class="countdown" hidden></p>
+          <div class="level">
+            <div class="mini-scene" aria-hidden="true">
+              <div class="mini-person">
+                <div class="mini-head" id="mini-head"></div>
+                <div class="mini-body"></div>
+              </div>
+              <div class="mini-phone" id="mini-phone"></div>
+            </div>
+            <p id="level-read" class="level-read">角度を待っています</p>
+          </div>
+        </div>
+
+        <button type="button" class="primary" id="start-btn" aria-pressed="false">
+          <span class="dot" id="live-dot" hidden></span>
+          <span id="start-label">見守りを始める</span>
+        </button>
+
+        <div class="banner" id="cal-banner">
+          <p>楽な持ち方を覚えると、あなた基準で判定できます。未設定のあいだは 55° を基準にします。</p>
+          <button type="button" id="banner-cal">基準を合わせる</button>
+        </div>
+
+        <label class="sim" id="sim-box" hidden>
+          <span>試しの傾き <strong id="sim-val">55°</strong></span>
+          <input id="sim-range" type="range" min="0" max="90" value="55" aria-label="試しの傾き">
+          <small>0°が水平、90°が垂直です。パソコンでは、このつまみで角度を再現できます。</small>
+        </label>
+        <p id="sim-note" class="fine" hidden>いまは試しの傾きです。見守り中の記録も、この角度で残ります。</p>
+
+        <div class="stats">
+          <div>
+            <span>今日の警告</span>
+            <strong id="stat-alerts">0回</strong>
+          </div>
+          <div>
+            <span>今日の使用</span>
+            <strong id="stat-use">0秒</strong>
+          </div>
+        </div>
+
+        <div class="card goal">
+          <p class="eyebrow" id="goal-title">今日の目標</p>
+          <p id="goal-detail" class="goal-detail">昨日の記録がまだありません</p>
+          <div class="track" aria-hidden="true"><div id="goal-bar"></div></div>
+          <p id="goal-caption" class="fine"></p>
+        </div>
+
+        <button type="button" class="text-btn" id="open-stretch-link">首と肩を 1分ほぐす</button>
+        <p class="fine">カメラは使いません。記録はこの端末だけに残ります。医療機関ではなく、診断や治療のためのアプリではありません。</p>
+      </section>
+
+      <section id="screen-record" hidden aria-label="記録">
+        <h2>記録</h2>
+        <p id="rec-goal" class="rule"></p>
+        <div class="stats four">
+          <div><span>下向き</span><strong id="rec-down">0秒</strong></div>
+          <div><span>使用</span><strong id="rec-use">0秒</strong></div>
+          <div><span>警告</span><strong id="rec-alerts">0回</strong></div>
+          <div><span>ストレッチ</span><strong id="rec-stretch">0回</strong></div>
+        </div>
+        <div class="card">
+          <p class="eyebrow">この7日の下向き時間</p>
+          <canvas id="week-canvas" class="chart" role="img" aria-label="週の下向き時間"></canvas>
+          <p id="week-summary" class="visually-hidden"></p>
+          <p id="trend-text" class="trend"></p>
+        </div>
+        <div class="card">
+          <p class="eyebrow">今日の時間帯</p>
+          <canvas id="hour-canvas" class="chart hour" role="img" aria-label="今日の時間帯ごとの下向き"></canvas>
+          <p class="fine">うすい棒は見ていた時間、濃い棒はそのうち下を向いていた時間です。</p>
+        </div>
+        <div class="card">
+          <p class="eyebrow">達成した日</p>
+          <p id="streak-text" class="goal-detail"></p>
+          <ul id="goal-list" class="goal-list"></ul>
+        </div>
+      </section>
+
+      <section id="screen-stretch" hidden aria-label="ストレッチ">
+        <h2>1分ストレッチ</h2>
+        <p class="lead">長く見たあとや、警告のあとに。痛みの出ない範囲で、息は止めません。</p>
+        <ol class="poses">
+          <li><strong>右へ倒す</strong><span>右の耳を肩へ。左肩は下げたまま。</span></li>
+          <li><strong>左へ倒す</strong><span>左の耳を肩へ。右肩は下げたまま。</span></li>
+          <li><strong>あごを引く</strong><span>上を向かず、うなじを長く。</span></li>
+          <li><strong>肩を回す</strong><span>肩甲骨を寄せるイメージで、ゆっくり。</span></li>
+        </ol>
+        <button type="button" class="primary" id="start-stretch">1分はじめる</button>
+        <p class="fine">痛み、しびれ、めまいがある動きは、すぐにやめてください。これは運動指導ではなく、日常の習慣を整えるための提案です。</p>
+      </section>
+
+      <section id="screen-settings" hidden aria-label="設定">
+        <h2>設定</h2>
+        <p class="eyebrow">シーン</p>
+        <div class="segment" role="group" aria-label="シーン">
+          <button type="button" id="scene-commute" aria-pressed="false">通勤</button>
+          <button type="button" id="scene-desk" aria-pressed="true">デスク</button>
+          <button type="button" id="scene-night" aria-pressed="false">寝る前</button>
+        </div>
+        <p id="scene-hint" class="fine"></p>
+
+        <label class="slider">
+          <span>下向きの閾値 <strong id="threshold-out">30°</strong></span>
+          <input id="threshold" type="range" min="10" max="45" step="1" value="30">
+          <small>基準の持ち方から、これ以上下がると「下向き」です。</small>
+        </label>
+        <label class="slider">
+          <span>続く時間 <strong id="duration-out">20秒</strong></span>
+          <input id="duration" type="range" min="5" max="60" step="1" value="20">
+          <small>一瞬の傾きでは鳴りません。この秒数だけ続くと知らせます。</small>
+        </label>
+
+        <p class="eyebrow">立ち上がる間隔</p>
+        <div class="segment" role="group" aria-label="立ち上がる間隔">
+          <button type="button" id="break-30" aria-pressed="false">30分</button>
+          <button type="button" id="break-45" aria-pressed="true">45分</button>
+          <button type="button" id="break-60" aria-pressed="false">60分</button>
+        </div>
+        <p class="fine">同じ姿勢を保ち続けることも負担になります。角度が良くても、この間隔で動く合図を出します。</p>
+
+        <div class="stepper-row">
+          <div>
+            <p class="eyebrow">小さな目標</p>
+            <p class="fine">昨日の下向き時間から、この分数だけ短くします。</p>
+          </div>
+          <div class="stepper">
+            <button type="button" id="goal-minus" aria-label="目標を1分短くする">−</button>
+            <span id="goal-val">5分</span>
+            <button type="button" id="goal-plus" aria-label="目標を1分長くする">＋</button>
+          </div>
+        </div>
+
+        <p class="eyebrow">知らせ方</p>
+        <div class="switches">
+          <button type="button" class="switch" id="toggle-vibrate" role="switch" aria-checked="true" data-alert="vibrate">
+            <span><strong>バイブ</strong><small>短く、一度だけ震えます</small></span>
+            <span class="knob" aria-hidden="true"></span>
+          </button>
+          <button type="button" class="switch" id="toggle-notification" role="switch" aria-checked="true" data-alert="notification">
+            <span><strong>通知</strong><small>画面を見ていないときの合図です</small></span>
+            <span class="knob" aria-hidden="true"></span>
+          </button>
+          <button type="button" class="switch" id="toggle-blur" role="switch" aria-checked="true" data-alert="blur">
+            <span><strong>画面のぼかし</strong><small>警告のあいだ、後ろをぼかします</small></span>
+            <span class="knob" aria-hidden="true"></span>
+          </button>
+          <button type="button" class="switch" id="toggle-color" role="switch" aria-checked="true" data-alert="color">
+            <span><strong>色を変える</strong><small>画面の端の色で気づけるようにします</small></span>
+            <span class="knob" aria-hidden="true"></span>
+          </button>
+          <button type="button" class="switch" id="toggle-voice" role="switch" aria-checked="true" data-alert="voice">
+            <span><strong>音声ガイド</strong><small>短い声で、上げ方を伝えます</small></span>
+            <span class="knob" aria-hidden="true"></span>
+          </button>
+          <button type="button" class="switch" id="toggle-floater" role="switch" aria-checked="true" data-alert="floater">
+            <span><strong>浮遊アイコン</strong><small>通知の前に、小さな印が様子を伝えます</small></span>
+            <span class="knob" aria-hidden="true"></span>
+          </button>
+          <button type="button" class="switch" id="toggle-sim" role="switch" aria-checked="false">
+            <span><strong>つまみで試す</strong><small>センサーの代わりに、傾きを手で再現します</small></span>
+            <span class="knob" aria-hidden="true"></span>
+          </button>
+        </div>
+        <p id="notify-note" class="fine"></p>
+
+        <div class="card flat">
+          <p class="eyebrow">基準の姿勢</p>
+          <p id="baseline-text">未設定（55° を基準にしています）</p>
+          <button type="button" class="secondary" id="open-cal">楽な持ち方を覚える</button>
+        </div>
+
+        <div class="card flat">
+          <p class="eyebrow">ホーム画面</p>
+          <button type="button" class="secondary" id="install-btn" hidden>アプリとして追加</button>
+          <p class="fine">iPhone は共有ボタンから「ホーム画面に追加」。Android はブラウザのメニューから追加できます。</p>
+        </div>
+
+        <div class="card flat note">
+          <p class="eyebrow">測定について</p>
+          <p>この画面を開いている間だけ、角度を測ります。ほかのアプリに移ると、ブラウザの仕組みでセンサーが止まり、その時間は記録しません。</p>
+          <p>0°は画面が水平、90°は垂直です。楽な持ち方を基準にして、そこから閾値を超える下向きが、指定の秒数続くと「首が下がっている」と判定します。</p>
+        </div>
+
+        <div class="card flat note">
+          <p class="eyebrow">プライバシーと注意</p>
+          <p>カメラは使いません。角度も記録も、この端末の中だけで処理します。サーバーへは送りません。</p>
+          <p>本アプリは医療機関ではなく、診断・治療を目的としません。首や肩に痛み・しびれがある場合は、医療機関に相談してください。日常の習慣を整えるためのツールです。</p>
+        </div>
+
+        <button type="button" class="text-btn danger" id="wipe">記録を消す</button>
+        <button type="button" class="text-btn danger" id="wipe-yes" hidden>本当に消す</button>
+      </section>
+    </main>
+
+    <div id="suggest" class="suggest" hidden>
+      <p id="suggest-text"></p>
+      <div>
+        <button type="button" id="suggest-go">1分ストレッチ</button>
+        <button type="button" id="suggest-x">閉じる</button>
+      </div>
+    </div>
+
+    <nav class="tabs" aria-label="画面">
+      <button type="button" id="tab-watch" aria-current="page">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 18h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        見守り
+      </button>
+      <button type="button" id="tab-record">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V10M12 19V5M19 19v-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        記録
+      </button>
+      <button type="button" id="tab-stretch">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v6M8 11l4 2 4-2M9 21l3-8 3 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        ストレッチ
+      </button>
+      <button type="button" id="tab-settings">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h10M18 8h2M4 16h2M10 16h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="8" r="2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="8" cy="16" r="2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+        設定
+      </button>
+    </nav>
+
+  <button type="button" id="floater" class="floater bob" hidden aria-label="角度のようす">
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <circle cx="24" cy="24" r="20" class="ring-bg"></circle>
+      <circle id="ring" cx="24" cy="24" r="20" transform="rotate(-90 24 24)"></circle>
+    </svg>
+    <span class="face calm" id="face"><i></i><i></i><b></b></span>
+    <span class="floater-tip" id="floater-tip"></span>
+  </button>
+  </div>
+
+  <div id="toast" role="status"></div>
+
+  <div id="welcome" class="sheet welcome-sheet">
+    <div class="sheet-card">
+      <p class="eyebrow">日常の習慣を整える</p>
+      <h2>首らく</h2>
+      <p>スマホを見る角度を、この端末の中だけで見守ります。</p>
+      <ol class="welcome-list">
+        <li>楽な持ち方を基準にします。</li>
+        <li>下向きが続いたときだけ知らせます。</li>
+        <li>時々、立ち上がって動く合図も出します。</li>
+      </ol>
+      <p class="disclaimer">医療機関ではなく、診断や治療のためのものではありません。痛みやしびれがあるときは、医療機関に相談してください。カメラは使わず、記録はこの端末の中だけに残します。</p>
+      <button type="button" class="primary" id="welcome-start">はじめる</button>
+    </div>
+  </div>
+
+  <div id="cal-sheet" class="sheet" hidden>
+    <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="cal-title">
+      <p class="eyebrow">キャリブレーション</p>
+      <h2 id="cal-title">楽な姿勢で持ってください</h2>
+      <p>背すじは力まず、あごを軽く引き、画面を目線に近い高さへ。痛みが出ない範囲で大丈夫です。完璧な姿勢を目指さなくていいです。</p>
+      <p id="cal-live" class="cal-live">いま —°</p>
+      <p id="cal-count" class="cal-count" hidden>3</p>
+      <p id="cal-result" class="disclaimer" hidden></p>
+      <button type="button" class="primary" id="cal-go">この角度を覚える</button>
+      <button type="button" class="text-btn" id="cal-cancel">閉じる</button>
+    </div>
+  </div>
+
+  <div id="alert-layer" class="sheet" hidden>
+    <div class="dim" id="alert-dim" data-kind="alert"></div>
+    <div class="sheet-card" role="alertdialog" aria-modal="true" aria-labelledby="alert-title" aria-describedby="alert-body">
+      <p class="eyebrow">角度</p>
+      <h2 id="alert-title">首が下がっています</h2>
+      <p id="alert-body"></p>
+      <button type="button" class="primary" id="alert-stretch">1分ストレッチ</button>
+      <button type="button" class="secondary" id="alert-fix">角度を戻す</button>
+    </div>
+  </div>
+
+  <div id="break-layer" class="sheet" hidden>
+    <div class="dim" id="break-dim" data-kind="break"></div>
+    <div class="sheet-card" role="alertdialog" aria-modal="true" aria-labelledby="break-title" aria-describedby="break-body">
+      <p class="eyebrow">休憩</p>
+      <h2 id="break-title">立つタイミングです</h2>
+      <p id="break-body"></p>
+      <button type="button" class="primary" id="break-stand">立ち上がって動く</button>
+      <button type="button" class="secondary" id="break-snooze">10分後にもう一度</button>
+    </div>
+  </div>
+
+  <div id="stretch-sheet" class="sheet" hidden>
+    <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="stretch-title">
+      <p class="eyebrow" id="stretch-kicker">1 / 4</p>
+      <div class="stage" aria-hidden="true">
+        <div class="person" id="person">
+          <div class="head">
+            <span class="hair"></span>
+            <span class="eye left"></span>
+            <span class="eye right"></span>
+          </div>
+          <div class="neck"></div>
+          <div class="torso"></div>
+          <div class="arm left"></div>
+          <div class="arm right"></div>
+        </div>
+      </div>
+      <h2 id="stretch-title">右の耳を、肩に近づける</h2>
+      <p id="stretch-note">肩は上げすぎないで、息は止めません。</p>
+      <div class="track"><div id="stretch-bar"></div></div>
+      <p id="stretch-count" class="fine">残り 60秒</p>
+      <button type="button" class="secondary" id="stretch-stop">終わる</button>
+    </div>
+  </div>
+
+  <noscript><p>首らくを使うには JavaScript を有効にしてください。</p></noscript>
+  <script src="app.js"></script>
+</body>
+</html>
