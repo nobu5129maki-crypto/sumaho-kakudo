@@ -1,10 +1,10 @@
 {
-  "id": "/",
+  "id": "./",
   "name": "首らく — スマホの角度",
   "short_name": "首らく",
   "description": "スマホを見る角度を見守る、日常の習慣改善ツールです。",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#2F6D56",

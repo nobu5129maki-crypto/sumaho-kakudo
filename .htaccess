@@ -1,0 +1,17 @@
+# 入口は index.php のログイン画面。ブラウザの認証ダイアログは出さない。
+DirectoryIndex index.php
+Options -Indexes
+
+<FilesMatch "^(auth\.php|index\.html|install\.html)$">
+  Require all denied
+</FilesMatch>
+
+RewriteEngine On
+RewriteRule ^(index\.html|install\.html|app\.js|styles\.css|sw\.js|manifest\.json)$ gate.php [L]
+RewriteRule ^download/kubiraku\.apk$ gate.php [L]
+
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  Header set Permissions-Policy "accelerometer=(self), gyroscope=(self), magnetometer=(self)"
+</IfModule>
