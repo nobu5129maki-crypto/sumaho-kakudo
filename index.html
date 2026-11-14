@@ -22,6 +22,16 @@
       var raw = JSON.parse(localStorage.getItem('kubiraku-v1') || 'null');
       if (raw && raw.settings && raw.settings.welcomed) document.documentElement.classList.add('welcomed');
     } catch (e) {}
+    try {
+      var pendingId = sessionStorage.getItem('sumaho_kakudo_pending_id');
+      var pendingPassword = sessionStorage.getItem('sumaho_kakudo_pending_password');
+      if (pendingId && pendingPassword) {
+        localStorage.setItem('sumaho_kakudo_login_id', pendingId);
+        localStorage.setItem('sumaho_kakudo_login_password', pendingPassword);
+        sessionStorage.removeItem('sumaho_kakudo_pending_id');
+        sessionStorage.removeItem('sumaho_kakudo_pending_password');
+      }
+    } catch (e) {}
   </script>
 </head>
 <body>
@@ -187,31 +197,15 @@
         <p class="eyebrow">知らせ方</p>
         <div class="switches">
           <button type="button" class="switch" id="toggle-vibrate" role="switch" aria-checked="true" data-alert="vibrate">
-            <span><strong>バイブ</strong><small>短く、一度だけ震えます</small></span>
+            <span><strong>バイブ</strong><small>約5秒、震えます</small></span>
             <span class="knob" aria-hidden="true"></span>
           </button>
           <button type="button" class="switch" id="toggle-notification" role="switch" aria-checked="true" data-alert="notification">
             <span><strong>通知</strong><small>画面を見ていないときの合図です</small></span>
             <span class="knob" aria-hidden="true"></span>
           </button>
-          <button type="button" class="switch" id="toggle-blur" role="switch" aria-checked="true" data-alert="blur">
-            <span><strong>画面のぼかし</strong><small>警告のあいだ、後ろをぼかします</small></span>
-            <span class="knob" aria-hidden="true"></span>
-          </button>
-          <button type="button" class="switch" id="toggle-color" role="switch" aria-checked="true" data-alert="color">
-            <span><strong>色を変える</strong><small>画面の端の色で気づけるようにします</small></span>
-            <span class="knob" aria-hidden="true"></span>
-          </button>
           <button type="button" class="switch" id="toggle-voice" role="switch" aria-checked="true" data-alert="voice">
             <span><strong>音声ガイド</strong><small>短い声で、上げ方を伝えます</small></span>
-            <span class="knob" aria-hidden="true"></span>
-          </button>
-          <button type="button" class="switch" id="toggle-floater" role="switch" aria-checked="true" data-alert="floater">
-            <span><strong>浮遊アイコン</strong><small>通知の前に、小さな印が様子を伝えます</small></span>
-            <span class="knob" aria-hidden="true"></span>
-          </button>
-          <button type="button" class="switch" id="toggle-sim" role="switch" aria-checked="false">
-            <span><strong>つまみで試す</strong><small>センサーの代わりに、傾きを手で再現します</small></span>
             <span class="knob" aria-hidden="true"></span>
           </button>
         </div>
@@ -226,12 +220,13 @@
         <div class="card flat">
           <p class="eyebrow">ホーム画面</p>
           <button type="button" class="secondary" id="install-btn" hidden>アプリとして追加</button>
-          <p class="fine">iPhone は共有ボタンから「ホーム画面に追加」。Android はブラウザのメニューから追加できます。</p>
+          <p id="install-note" class="fine">Android のアプリは、<a href="install.php">入れるページ</a>からダウンロードできます。入れると、ほかのアプリを開いていても傾きを見守れます。</p>
         </div>
 
         <div class="card flat note">
           <p class="eyebrow">測定について</p>
-          <p>この画面を開いている間だけ、角度を測ります。ほかのアプリに移ると、ブラウザの仕組みでセンサーが止まり、その時間は記録しません。</p>
+          <p id="measure-note">この画面を開いている間だけ、角度を測ります。ほかのアプリに移ると、ブラウザの仕組みでセンサーが止まり、その時間は記録しません。</p>
+          <button type="button" class="secondary" id="battery-btn" hidden>電池の最適化を解除</button>
           <p>0°は画面が水平、90°は垂直です。楽な持ち方を基準にして、そこから閾値を超える下向きが、指定の秒数続くと「首が下がっている」と判定します。</p>
         </div>
 

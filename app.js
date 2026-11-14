@@ -189,6 +189,43 @@
     if (allowSim) return simBeta;
     return null;
   }
+  function nativeBridge() {
+    try {
+      const kubi = window.Kubi;
+      if (!kubi || !kubi.pull) return null;
+      return kubi;
+    } catch (e) {
+      return null;
+    }
+  }
+  function nativeActive() {
+    return !!nativeBridge() && !settings.forceSim;
+  }
+  function nativeConfig() {
+    return JSON.stringify({
+      baseline: baseline(),
+      threshold: settings.threshold,
+      durationSec: settings.durationSec,
+      breakIntervalMin: settings.breakIntervalMin,
+      vibrate: !!settings.alerts.vibrate,
+      notify: !!settings.alerts.notification,
+      voice: !!settings.alerts.voice
+    });
+  }
+  function syncNativeConfig() {
+    const bridge = nativeBridge();
+    if (!bridge || !watching || settings.forceSim) return;
+    try { bridge.update(nativeConfig()); } catch (e) { /* 反映に失敗しても、画面の設定はそのまま残す */ }
+  }
+  let nativePausedSent = null;
+  function syncNativePause() {
+    const bridge = nativeBridge();
+    if (!bridge || !watching || settings.forceSim) return;
+    const paused = modalBlocking();
+    if (paused === nativePausedSent) return;
+    nativePausedSent = paused;
+    try { bridge.setPaused(paused ? 'true' : 'false'); } catch (e) { /* シート中の一時停止は次回で再送する */ }
+  }
   function sample() {
     const beta = readBeta();
     const base = baseline();
@@ -429,7 +466,6 @@
     document.querySelectorAll('.switch[data-alert]').forEach((btn) => {
       btn.setAttribute('aria-checked', String(!!settings.alerts[btn.dataset.alert]));
     });
-    $('toggle-sim').setAttribute('aria-checked', String(!!settings.forceSim));
     $('baseline-text').textContent = settings.baseline == null
       ? '未設定（55° を基準にしています）'
       : `基準は ${Math.round(settings.baseline)}° です。ここから ${settings.threshold}° 下がると下向きです。`;
@@ -698,13 +734,7 @@
     mark();
   }
 
-  function fireAlert(down) {
-    alertArmed = false;
-    badAccum = 0;
-    sessionAlerts += 1;
-    const day = ensureDay(dateKey(new Date()));
-    day.alerts += 1;
-    mark();
+  function presentAlert(down, quiet) {
     const line = VOICE_ALERT[Math.floor(Math.random() * VOICE_ALERT.length)];
     let body = `基準より ${Math.round(down)}° 下がった状態が ${settings.durationSec}秒 続きました。画面を目の高さに近づけ、あごを軽く引いてみましょう。`;
     if (sessionAlerts >= 3) body += ' 続けて起きています。1分だけ、首を伸ばしましょう。';
@@ -713,38 +743,90 @@
     $('alert-layer').hidden = false;
     syncTint();
     $('alert-fix').focus();
-    buzz([90, 50, 90]);
-    chime('alert');
-    speak(line);
-    notify(line);
+    if (!quiet) {
+      buzz([600, 120, 600, 120, 600, 120, 600, 120, 600, 120, 600, 120, 600]);
+      chime('alert');
+      speak(line);
+      notify(line);
+    }
     renderChrome();
+  }
+  function fireAlert(down) {
+    alertArmed = false;
+    badAccum = 0;
+    sessionAlerts += 1;
+    const day = ensureDay(dateKey(new Date()));
+    day.alerts += 1;
+    mark();
+    presentAlert(down, false);
   }
   function closeAlert(suggest) {
     $('alert-layer').hidden = true;
     syncTint();
     if (suggest) maybeSuggest('下向きが続いていました。余裕があれば、1分だけ伸ばしましょう。');
   }
-  function fireBreak() {
-    const day = ensureDay(dateKey(new Date()));
-    day.breaks += 1;
-    mark();
+  function presentBreak(quiet) {
     const line = VOICE_BREAK[Math.floor(Math.random() * VOICE_BREAK.length)];
     $('break-body').textContent = `同じ姿勢で約 ${settings.breakIntervalMin}分 見ています。完璧な角度を保ち続けることも、首や肩の負担になります。一度立ち上がって、その場で足踏みをしましょう。`;
     paintDim($('break-dim'));
     $('break-layer').hidden = false;
     syncTint();
     $('break-stand').focus();
-    buzz([60, 40, 60, 40, 60]);
-    chime('break');
-    speak(line);
-    notify(line);
+    if (!quiet) {
+      buzz([600, 120, 600, 120, 600, 120, 600, 120, 600, 120, 600, 120, 600]);
+      chime('break');
+      speak(line);
+      notify(line);
+    }
+  }
+  function fireBreak() {
+    const day = ensureDay(dateKey(new Date()));
+    day.breaks += 1;
+    mark();
+    presentBreak(false);
     nextBreakAt = sessionMs + settings.breakIntervalMin * 60000;
   }
   function closeBreak(snooze) {
     $('break-layer').hidden = true;
     syncTint();
-    nextBreakAt = sessionMs + (snooze ? 10 : settings.breakIntervalMin) * 60000;
+    const minutes = snooze ? 10 : settings.breakIntervalMin;
+    nextBreakAt = sessionMs + minutes * 60000;
+    if (nativeActive()) {
+      try { nativeBridge().snooze(String(minutes)); } catch (e) { /* 次回の合図は画面側の時刻でも待つ */ }
+    }
     if (!snooze) toast('肩をひとつ回したら、また画面の高さを目線に近づけましょう。');
+    syncNativePause();
+  }
+  function applyNativePull(fromResume) {
+    const bridge = nativeBridge();
+    if (!bridge) return;
+    let packet = null;
+    try { packet = JSON.parse(bridge.pull() || '{}'); } catch (e) { return; }
+    if (!packet) return;
+    if (packet.angle != null && !settings.forceSim) pushBeta(Number(packet.angle));
+    if (packet.badMs != null) badAccum = Number(packet.badMs);
+    if (packet.alertArmed != null) alertArmed = !!packet.alertArmed;
+    if (packet.sessionMs != null) sessionMs = Number(packet.sessionMs);
+    if (packet.sessionAlerts != null) sessionAlerts = Number(packet.sessionAlerts);
+    const chunks = packet.chunks || [];
+    chunks.forEach((ch) => {
+      const day = ensureDay(ch.date);
+      const hour = clamp(num(ch.hour), 0, 23);
+      day.useSec += num(ch.useSec);
+      day.downSec += num(ch.downSec);
+      day.hourUse[hour] += num(ch.useSec);
+      day.hours[hour] += num(ch.downSec);
+      day.alerts += num(ch.alerts);
+      day.breaks += num(ch.breaks);
+    });
+    if (chunks.length) {
+      mark();
+      renderGoal();
+      if (!$('screen-record').hidden) renderRecord();
+    }
+    if (packet.showAlert && packet.showAlert.down != null) presentAlert(packet.showAlert.down, !!fromResume);
+    if (packet.showBreak) presentBreak(!!fromResume);
+    if (packet.showLong) maybeSuggest('20分たちました。一度、首と肩を動かしましょう。');
   }
   function maybeSuggest(text) {
     if (Date.now() - lastSuggest < 10 * 60 * 1000) return;
@@ -847,18 +929,23 @@
     badAccum = 0;
     alertArmed = true;
     save();
+    syncNativeConfig();
     $('cal-result').hidden = false;
     $('cal-result').textContent = `基準を ${Math.round(settings.baseline)}° にしました。ここから ${settings.threshold}° 以上下がると知らせます。`;
     renderSettings();
   }
 
   async function startWatch() {
-    const sensorPromise = ensureSensorPermission();
-    if (settings.alerts.notification) ensureNotify();
-    const permitted = await sensorPromise;
-    if (!permitted) {
-      allowSim = true;
-      toast('センサーが使えません。つまみで傾きを試せます。');
+    if (nativeBridge() && !settings.forceSim) {
+      try { nativeBridge().start(nativeConfig()); } catch (e) { /* 開始に失敗したときは、下の画面側の見守りに落ちる */ }
+    } else {
+      const sensorPromise = ensureSensorPermission();
+      if (settings.alerts.notification) ensureNotify();
+      const permitted = await sensorPromise;
+      if (!permitted) {
+        allowSim = true;
+        toast('センサーが使えません。つまみで傾きを試せます。');
+      }
     }
     if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
     watching = true;
@@ -873,21 +960,37 @@
     $('start-btn').setAttribute('aria-pressed', 'true');
     $('start-label').textContent = '見守りを止める';
     $('live-dot').hidden = false;
-    await lockWake();
+    nativePausedSent = null;
+    syncNativePause();
+    if (!nativeActive()) await lockWake();
     if (settings.baseline == null) toast('基準は 55° です。あとから合わせられます。');
     renderChrome();
   }
-  function stopWatch() {
+  function stopWatch(fromNative) {
     watching = false;
     badAccum = 0;
     $('start-btn').classList.remove('quiet');
     $('start-btn').setAttribute('aria-pressed', 'false');
     $('start-label').textContent = '見守りを始める';
     $('live-dot').hidden = true;
+    if (!fromNative && nativeBridge()) {
+      try { nativeBridge().stop(); } catch (e) { /* 画面側は止まったものとして扱う */ }
+      applyNativePull(false);
+    }
     unlockWake();
     save();
     renderChrome();
     renderGoal();
+  }
+  function adoptNativeWatch() {
+    watching = true;
+    $('start-btn').classList.add('quiet');
+    $('start-btn').setAttribute('aria-pressed', 'true');
+    $('start-label').textContent = '見守りを止める';
+    $('live-dot').hidden = false;
+    nativePausedSent = null;
+    applyNativePull(false);
+    renderChrome();
   }
 
   function showScreen(name) {
@@ -922,6 +1025,7 @@
       if (watching) nextBreakAt = sessionMs + preset.breakIntervalMin * 60000;
     }
     save();
+    syncNativeConfig();
     renderSettings();
   }
 
@@ -984,6 +1088,7 @@
     settings.threshold = Number(e.target.value);
     syncScene();
     save();
+    syncNativeConfig();
     renderSettings();
   });
   $('duration').addEventListener('input', (e) => {
@@ -991,6 +1096,7 @@
     syncScene();
     badAccum = 0;
     save();
+    syncNativeConfig();
     renderSettings();
   });
   [30, 45, 60].forEach((min) => {
@@ -999,6 +1105,7 @@
       if (watching) nextBreakAt = sessionMs + min * 60000;
       syncScene();
       save();
+      syncNativeConfig();
       renderSettings();
     });
   });
@@ -1018,14 +1125,9 @@
       settings.alerts[key] = !settings.alerts[key];
       if (key === 'notification' && settings.alerts.notification) await ensureNotify();
       save();
+      syncNativeConfig();
       renderSettings();
     });
-  });
-  $('toggle-sim').addEventListener('click', () => {
-    settings.forceSim = !settings.forceSim;
-    if (settings.forceSim) sensorMode = 'none';
-    save();
-    renderSettings();
   });
   $('sim-range').addEventListener('input', (e) => {
     simBeta = Number(e.target.value);
@@ -1034,9 +1136,18 @@
   });
   $('wipe').addEventListener('click', () => { $('wipe-yes').hidden = false; });
   $('wipe-yes').addEventListener('click', () => {
+    if (nativeBridge()) {
+      try { nativeBridge().stop(); } catch (e) { /* 記録を消す操作は続ける */ }
+    }
     localStorage.removeItem(KEY);
     location.reload();
   });
+  const batteryBtn = $('battery-btn');
+  if (batteryBtn) {
+    batteryBtn.addEventListener('click', () => {
+      if (nativeBridge()) nativeBridge().battery();
+    });
+  }
   $('install-btn').addEventListener('click', async () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
@@ -1108,8 +1219,13 @@
       hiddenAt = Date.now();
       save();
     } else if (watching) {
-      lockWake();
-      if (hiddenAt && Date.now() - hiddenAt > 1500) toast('裏に回っている間は、測定を止めていました');
+      if (nativeActive()) {
+        applyNativePull(true);
+        renderChrome();
+      } else {
+        lockWake();
+        if (hiddenAt && Date.now() - hiddenAt > 1500) toast('裏に回っている間は、測定を止めていました');
+      }
     }
   });
   window.addEventListener('pagehide', save);
@@ -1123,7 +1239,42 @@
   function frame(now) {
     const gap = now - lastFrame;
     lastFrame = now;
-    if (gap > 1500 || document.hidden) {
+    if (document.hidden) {
+      updateVisuals();
+      requestAnimationFrame(frame);
+      return;
+    }
+    if (nativeActive() && watching) {
+      syncNativePause();
+      applyNativePull(false);
+      const keyNow = dateKey(new Date());
+      if (keyNow !== todayKey) {
+        todayKey = keyNow;
+        finalizeGoals();
+        save();
+      }
+      if (!$('alert-layer').hidden) {
+        const recovered = sample();
+        const recoverLine = Math.max(5, settings.threshold - 8);
+        if (recovered.down != null && recovered.down <= recoverLine) {
+          if (!recoverSince) recoverSince = now;
+          else if (now - recoverSince > 1200) closeAlert(false);
+        } else {
+          recoverSince = 0;
+        }
+      }
+      chartAcc += gap > 1500 ? 0 : gap;
+      if (chartAcc > 1000) {
+        chartAcc = 0;
+        renderChrome();
+        renderGoal();
+        if (!$('screen-record').hidden) renderRecord();
+      }
+      updateVisuals();
+      requestAnimationFrame(frame);
+      return;
+    }
+    if (gap > 1500) {
       updateVisuals();
       requestAnimationFrame(frame);
       return;
@@ -1179,11 +1330,34 @@
   setInterval(() => { if (dirty) save(); }, 5000);
   setTimeout(() => { allowSim = true; renderChrome(); }, 1200);
 
-  if ('serviceWorker' in navigator) {
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     });
   }
+
+  function applyShellCopy() {
+    if (!nativeBridge()) return;
+    const measure = $('measure-note');
+    if (measure) {
+      measure.textContent = '見守りを始めているあいだは、ほかのアプリを開いていても傾きを測ります。画面の上に「見守っています」の通知が出ます。その通知を消すか、見守りを止めると、測定も止まります。画面が消えているあいだは、端末がセンサーを休めることがあります。';
+    }
+    const install = $('install-note');
+    if (install) {
+      install.textContent = 'この Android アプリとして入っています。見守り中は、通知を残したままほかのアプリを使えます。';
+    }
+    if ($('battery-btn')) $('battery-btn').hidden = false;
+    const list = document.querySelector('.welcome-list');
+    if (list) {
+      const li = document.createElement('li');
+      li.textContent = '見守り中は、ほかのアプリを開いていても測ります。';
+      list.appendChild(li);
+    }
+  }
+  window.__kubiStopped = () => { if (watching) stopWatch(true); };
+  window.__kubiNotifyDenied = () => toast('通知を許可すると、ほかのアプリの裏でも測定が止まりにくくなります。');
+  applyShellCopy();
+  if (nativeBridge() && nativeBridge().running()) adoptNativeWatch();
 
   const fg = $('g-fg');
   requestAnimationFrame(() => {
