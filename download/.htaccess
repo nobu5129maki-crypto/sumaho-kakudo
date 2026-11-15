@@ -1,0 +1,2 @@
+# APK はログイン後の gate.php だけが読む。直リンクは返さない。
+Require all denied

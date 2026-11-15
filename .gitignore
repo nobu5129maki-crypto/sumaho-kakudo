@@ -1,3 +1,6 @@
 .DS_Store
 .vercel
 node_modules
+config.php
+.htpasswd
+*.htpasswd

@@ -1,14 +1,13 @@
-const CACHE = 'kubiraku-v2';
+const CACHE = 'kubiraku-v3';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/styles.css',
-  '/app.js',
-  '/manifest.json',
-  '/icon-180.png',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/icon-maskable-512.png'
+  './',
+  './styles.css',
+  './app.js',
+  './manifest.json',
+  './icon-180.png',
+  './icon-192.png',
+  './icon-512.png',
+  './icon-maskable-512.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -35,13 +34,14 @@ self.addEventListener('fetch', (event) => {
       .then((res) => {
         try {
           const url = new URL(req.url);
-          if (res.ok && url.origin === self.location.origin) {
+          const cacheControl = res.headers.get('Cache-Control') || '';
+          if (res.ok && url.origin === self.location.origin && !/no-store/i.test(cacheControl)) {
             const copy = res.clone();
             caches.open(CACHE).then((cache) => cache.put(req, copy)).catch(() => {});
           }
         } catch (e) { /* キャッシュに残せなくても表示は続ける */ }
         return res;
       })
-      .catch(() => caches.match(req).then((cached) => cached || caches.match('/index.html')))
+      .catch(() => caches.match(req).then((cached) => cached || caches.match('./')))
   );
 });

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#2f6d56">
+  <meta name="description" content="首らくを Android に入れる手順です。">
+  <link rel="icon" href="icon-192.png" type="image/png">
+  <title>アプリを入れる — 首らく</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+      background: #f3efe7;
+      color: #1e2430;
+      margin: 0;
+      min-height: 100dvh;
+      padding: 24px 16px 48px;
+      line-height: 1.65;
+    }
+    .shell { width: 100%; max-width: 440px; margin: 0 auto; }
+    .hero { text-align: center; margin-bottom: 18px; }
+    .app-icon { width: 72px; height: 72px; border-radius: 18px; margin: 0 auto 10px; display: block; }
+    h1 { font-size: 1.35rem; color: #2f6d56; margin: 0; }
+    .version { font-size: 0.8rem; color: #4a524b; margin: 4px 0 0; }
+    .lead { margin: 14px 0 0; }
+    .lead strong, .flow-step strong { color: #2f6d56; }
+    .badges { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .badge {
+      background: #fffdf9;
+      border: 1px solid rgba(30, 36, 48, 0.08);
+      color: #2f6d56;
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 14px;
+      background: #2f6d56;
+      color: #fff;
+      font-size: 1.05rem;
+      font-weight: 800;
+      text-decoration: none;
+      text-align: center;
+    }
+    .btn.secondary { background: #fffdf9; color: #2f6d56; border: 2px solid #2f6d56; }
+    .btn.big { padding: 20px 16px; font-size: 1.12rem; }
+    .linklike {
+      display: block;
+      width: 100%;
+      margin-top: 8px;
+      padding: 10px;
+      background: none;
+      border: none;
+      color: #2f6d56;
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-decoration: underline;
+    }
+    .warn {
+      background: #fff1df;
+      border: 2px solid #e08a3c;
+      border-radius: 16px;
+      padding: 16px;
+      margin: 16px 0;
+    }
+    .warn[hidden] { display: none; }
+    .warn h2 { margin: 0 0 6px; font-size: 1.05rem; }
+    .warn p { margin: 0 0 12px; }
+    .feedback { margin: 8px 0 0; font-size: 0.85rem; color: #2f6d56; }
+    .feedback a { color: #2f6d56; word-break: break-all; }
+    .flow { list-style: none; margin: 18px 0 0; padding: 0; }
+    .flow-step {
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      gap: 12px;
+      background: #fffdf9;
+      border: 1px solid rgba(30, 36, 48, 0.08);
+      border-radius: 18px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .num {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #2f6d56;
+      color: #fff;
+      font-size: 1.25rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .flow-step h2 { margin: 4px 0 10px; font-size: 1.08rem; color: #2f6d56; }
+    .flow-step p { margin: 0 0 8px; }
+    .sub { font-size: 0.84rem; color: #4a524b; }
+    .red { color: #c4543a; font-weight: 800; }
+    .file-name {
+      display: inline-block;
+      background: #f3efe7;
+      border-radius: 8px;
+      padding: 2px 8px;
+      font-family: ui-monospace, Consolas, monospace;
+      font-weight: 700;
+      color: #2f6d56;
+    }
+    .protect-mock {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 14px 12px;
+      text-align: center;
+      margin: 10px 0;
+    }
+    .protect-mock .title { margin: 0 0 8px; font-size: 0.82rem; font-weight: 800; color: #111827; }
+    .fake-detail {
+      display: inline-block;
+      margin: 4px 0 10px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: #e5f4ec;
+      border: 2px solid #2f6d56;
+      color: #2f6d56;
+      font-size: 0.82rem;
+      font-weight: 800;
+    }
+    .fake-ok {
+      display: block;
+      padding: 12px;
+      border-radius: 10px;
+      background: #e5e7eb;
+      color: #6b7280;
+      font-weight: 700;
+      text-decoration: line-through;
+    }
+    .done {
+      margin: 16px 0 0;
+      padding: 14px 16px;
+      background: #e5f4ec;
+      border-radius: 14px;
+      color: #2f6d56;
+    }
+    details { margin-top: 16px; }
+    summary { cursor: pointer; color: #2f6d56; font-weight: 700; }
+    .help { margin-top: 8px; font-size: 0.9rem; color: #4a524b; }
+    .help .btn { margin-top: 8px; }
+    .legal { margin-top: 28px; font-size: 0.78rem; color: #4a524b; text-align: center; }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <img class="app-icon" src="icon-192.png" width="72" height="72" alt="">
+      <h1>首らく</h1>
+      <p class="version">アプリ版 1.2</p>
+    </header>
+
+    <section class="panel panel-android">
+      <p class="lead">スマホに<strong>アプリを入れる</strong>と、ほかのアプリを開いていても傾きを見守れます。</p>
+      <div class="badges">
+        <span class="badge">3ステップ</span>
+        <span class="badge">約1分</span>
+        <span class="badge">Play ストア不要</span>
+      </div>
+
+      <div class="warn" id="inapp-warn" hidden>
+        <h2>まず Chrome で開いてください</h2>
+        <p>いまは note などのアプリの中でこのページを見ています。このままではアプリを入れられません。</p>
+        <a class="btn" id="open-chrome" href="install.html">Chrome で開く</a>
+        <button type="button" class="linklike" id="copy-page">開かないとき：このページのリンクをコピー</button>
+        <p class="feedback" id="chrome-feedback" aria-live="polite"></p>
+      </div>
+
+      <ol class="flow">
+        <li class="flow-step">
+          <span class="num">1</span>
+          <div>
+            <h2>アプリをダウンロード</h2>
+            <a class="btn big" id="android-download" href="download.php">アプリをダウンロード</a>
+            <p class="sub">「悪影響を及ぼす可能性があります」と出たら、<strong>「ダウンロード」</strong>を押してください。Google の定型の確認で、異常ではありません。</p>
+          </div>
+        </li>
+        <li class="flow-step">
+          <span class="num">2</span>
+          <div>
+            <h2>ダウンロードしたファイルを開く</h2>
+            <p>画面の上に出る通知 <span class="file-name">kubiraku.apk</span> をタップします。これがアプリのファイルです。</p>
+            <p class="sub">通知が見つからないときは、Chrome 右上の <strong>⋮ → ダウンロード</strong> から開けます。「もう一度ダウンロードしますか？」と出たら <strong>キャンセル</strong>し、一覧のファイルを開いてください。</p>
+          </div>
+        </li>
+        <li class="flow-step">
+          <span class="num">3</span>
+          <div>
+            <h2>「インストール」を押す</h2>
+            <p>「デバイスを保護するため…」と出ても大丈夫です。小さい文字の <strong>詳細</strong> → <span class="red">インストールする</span> を押します。</p>
+            <div class="protect-mock" aria-hidden="true">
+              <p class="title">デバイスを保護するため<br>アプリをブロックしました</p>
+              <span class="fake-detail">ここを押す：詳細 → インストールする</span>
+              <span class="fake-ok">OK（押さない）</span>
+            </div>
+            <p class="sub">大きい <strong>OK</strong> は「やめる」なので押さないでください。「この提供元のアプリを許可」と出たら、スイッチをオンにして戻ります。</p>
+          </div>
+        </li>
+      </ol>
+
+      <p class="done">終わったら、ホーム画面の <strong>首らく</strong> を開き、「見守りを始める」で通知を許可してください。画面上に「首らくが見守っています」が出ていれば、ほかのアプリを開いていても測れます。</p>
+
+      <details>
+        <summary>うまくいかないとき</summary>
+        <div class="help">
+          <p>「この提供元を許可」の画面が出なかったときは、ここから許可できます。</p>
+          <a class="btn secondary" id="open-permission" href="intent:#Intent;action=android.settings.MANAGE_UNKNOWN_APP_SOURCES;data=package:com.android.chrome;end">インストールの許可を開く</a>
+          <p>手動で行う場合：設定 → アプリ → Chrome → 不明なアプリのインストール → オン</p>
+          <p>測定がすぐ止まるときは、アプリの設定で「電池の最適化を解除」を押してください。</p>
+        </div>
+      </details>
+    </section>
+
+    <p class="legal">カメラは使いません。記録はこの端末の中だけに残ります。医療機関ではなく、診断や治療のためのアプリではありません。</p>
+  </main>
+  <script>
+    (function () {
+      var pageUrl = location.href.split('#')[0].split('?')[0];
+      var openChrome = document.getElementById('open-chrome');
+      if (openChrome) {
+        var scheme = location.protocol.replace(':', '');
+        var hostPath = pageUrl.replace(/^https?:\/\//, '');
+        openChrome.href = 'intent://' + hostPath + '#Intent;scheme=' + scheme + ';package=com.android.chrome;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;launchFlags=0x10000000;S.browser_fallback_url=' + encodeURIComponent(pageUrl) + ';end';
+      }
+      var ua = navigator.userAgent || '';
+      var android = /Android/i.test(ua) || (navigator.userAgentData && navigator.userAgentData.platform === 'Android');
+      var inAppToken = /Line\/|Instagram|FBAN|FBAV|Twitter|MicroMessenger|; wv\)|note\.com|Hatena/i.test(ua);
+      var realBrowser = (/Chrome\/\d+|SamsungBrowser|Firefox\/|EdgA\//i.test(ua)) && !/; wv\)/i.test(ua);
+      var inApp = android && (inAppToken || !realBrowser);
+      var warn = document.getElementById('inapp-warn');
+      var download = document.getElementById('android-download');
+      var feedback = document.getElementById('chrome-feedback');
+      if (inApp && warn) {
+        warn.hidden = false;
+        if (download) {
+          download.addEventListener('click', function (event) {
+            event.preventDefault();
+            warn.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (feedback) feedback.textContent = '先に「Chrome で開く」を押してください。';
+          });
+        }
+      }
+      var copyBtn = document.getElementById('copy-page');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', function () {
+          var done = function (ok) {
+            if (feedback) feedback.textContent = ok
+              ? 'コピーしました。Chrome を開き、アドレス欄に貼り付けてください。'
+              : pageUrl;
+          };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(pageUrl).then(function () { done(true); }).catch(function () { done(false); });
+          } else {
+            done(false);
+          }
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
