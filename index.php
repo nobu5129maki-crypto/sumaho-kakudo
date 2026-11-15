@@ -52,7 +52,9 @@ http_response_code(200);
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#f3efe7">
     <title>ログイン | 首らく</title>
-    <link rel="icon" href="icon-192.png" type="image/png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon-192.png" type="image/png" sizes="192x192">
+    <link rel="apple-touch-icon" href="icon-180.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
@@ -189,6 +191,11 @@ http_response_code(200);
                 idInput.value = savedId;
             }
         } catch (err) {}
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(function () {});
+        }
     </script>
 </body>
 </html>
